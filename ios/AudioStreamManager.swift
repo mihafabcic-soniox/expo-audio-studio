@@ -401,7 +401,7 @@ class AudioStreamManager: NSObject, AudioDeviceManagerDelegate {
             return
         }
 
-        isAppInBackground = true
+        AudioStreamManager.isAppInBackground = true
         
         // If keepAwake is false, we should track this as a pause and actually pause the engine
         if let settings = recordingSettings, !settings.keepAwake {
@@ -429,7 +429,7 @@ class AudioStreamManager: NSObject, AudioDeviceManagerDelegate {
             return
         }
 
-        isAppInBackground = false
+        AudioStreamManager.isAppInBackground = false
         
         // If we were paused due to background and keepAwake was false, calculate pause duration
         if let settings = recordingSettings, !settings.keepAwake, let pauseStart = currentPauseStart {
