@@ -887,8 +887,12 @@ public class ExpoAudioStreamModule: Module, AudioStreamManagerDelegate, AudioDev
         if let compressionInfo = compressionInfo {
             resultDict["compression"] = compressionInfo
         }
-        
-        sendEvent(audioDataEvent, resultDict)
+
+        if !AudioStreamManager.isAppInBackground {
+            sendEvent(audioDataEvent, resultDict)
+        } else {
+            Logger.debug("ExpoAudioStreamModule", "Skipping sending audio event...")
+        }
     }
     
     private func requestNotificationPermissions() async -> Bool {
@@ -908,7 +912,12 @@ public class ExpoAudioStreamModule: Module, AudioStreamManagerDelegate, AudioDev
             Logger.debug("ExpoAudioStreamModule", "Delegate: didReceiveProcessingResult: Received nil result.")
         }
         let resultDict = result?.toDictionary() ?? [:] 
-        sendEvent(audioAnalysisEvent, resultDict)
+
+        if !AudioStreamManager.isAppInBackground {
+            sendEvent(audioAnalysisEvent, resultDict)
+        } else {
+            Logger.debug("ExpoAudioStreamModule", "Skipping sending audio analysis event...")
+        }
     }
     
     /// Checks microphone permission and calls the completion handler with the result.

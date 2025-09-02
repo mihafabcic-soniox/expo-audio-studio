@@ -50,6 +50,13 @@ class AudioStreamManager: NSObject, AudioDeviceManagerDelegate {
     var isRecording = false
     var isPaused = false
     var isPrepared = false  // Add this new state flag
+
+    // Flag to track if the app is in foreground. We should not emit events when the app is in background
+    // as this blocks UI thread and can cause app not responding (ANR) when returning to foreground 
+    // after a long background recording.
+    // While old app team didn't got/report any IOS related ANRs to this, this
+    // code is here to mimic the Android version.
+    static var isAppInBackground = false
     
     // Move static variables to class level
     private var debugBufferCounter = 0
@@ -393,6 +400,8 @@ class AudioStreamManager: NSObject, AudioDeviceManagerDelegate {
         if !isRecording || stopping {
             return
         }
+
+        isAppInBackground = true
         
         // If keepAwake is false, we should track this as a pause and actually pause the engine
         if let settings = recordingSettings, !settings.keepAwake {
@@ -419,6 +428,8 @@ class AudioStreamManager: NSObject, AudioDeviceManagerDelegate {
         if !isRecording || stopping {
             return
         }
+
+        isAppInBackground = false
         
         // If we were paused due to background and keepAwake was false, calculate pause duration
         if let settings = recordingSettings, !settings.keepAwake, let pauseStart = currentPauseStart {
