@@ -50,6 +50,16 @@ class ExpoAudioStreamModule : Module(), EventSender {
         // The module will be accessible from `requireNativeModule('ExpoAudioStream')` in JavaScript.
         Name("ExpoAudioStream")
 
+        OnActivityEntersForeground {
+            LogUtils.d(CLASS_NAME, "Activity entered foreground.")
+            audioRecorderManager.onAppGoesToForeground()
+        }
+
+        OnActivityEntersBackground {
+            LogUtils.d(CLASS_NAME, "Activity entered background.")
+            audioRecorderManager.onAppGoesToBackground()
+        }
+
         // Check permissions declared in the manifest
         try {
             val context = appContext.reactContext ?: throw IllegalStateException("React context not available")

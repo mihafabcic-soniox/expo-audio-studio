@@ -146,6 +146,21 @@ class AudioRecorderManager(
     private var cachedPrimaryFileSize: Long = 44L  // Start with WAV header size
     private var cachedCompressedFileSize: Long = 0L
 
+    // Flag to track if the app is in foreground. We should not emit events when the app is in background
+    // as this blocks UI thread and can cause app not responding (ANR) when returning to foreground 
+    // after a long background recording.
+    private val isAppInBackground = false
+
+    fun onAppGoesToForeground() {
+        LogUtils.d(CLASS_NAME, "App has entered the foreground.")
+        isAppInBackground = false
+    }
+
+    fun onAppGoesToBackground() {
+        LogUtils.d(CLASS_NAME, "App has entered the background.")
+        isAppInBackground = true
+    }
+
     // Add a method to handle device changes
     fun handleDeviceChange() {
         LogUtils.d(CLASS_NAME, "🔄 handleDeviceChange called - isRecording=${_isRecording.get()}, isPaused=${isPaused.get()}")
@@ -1527,15 +1542,19 @@ class AudioRecorderManager(
                                             - Raw data size: ${accumulatedAnalysisData.size()} bytes
                                         """.trimIndent())
                                         
-                                        mainHandler.post {
-                                            try {
-                                                eventSender.sendExpoEvent(
-                                                    Constants.AUDIO_ANALYSIS_EVENT_NAME,
-                                                    analysisData.toBundle()
-                                                )
-                                            } catch (e: Exception) {
-                                                LogUtils.e(CLASS_NAME, "Failed to send audio analysis event", e)
+                                        if(!isAppInBackground) {
+                                            mainHandler.post {
+                                                try {
+                                                    eventSender.sendExpoEvent(
+                                                        Constants.AUDIO_ANALYSIS_EVENT_NAME,
+                                                        analysisData.toBundle()
+                                                    )
+                                                } catch (e: Exception) {
+                                                    LogUtils.e(CLASS_NAME, "Failed to send audio analysis event", e)
+                                                }
                                             }
+                                        } else {
+                                            LogUtils.d(CLASS_NAME, "Skipping sending audio analysis event...")
                                         }
                                         
                                         lastEmissionTimeAnalysis = currentTime
@@ -1631,24 +1650,28 @@ class AudioRecorderManager(
             )
         } else null
         
-        mainHandler.post {
-            try {
-                eventSender.sendExpoEvent(
-                    Constants.AUDIO_EVENT_NAME, bundleOf(
-                        "fileUri" to audioFile?.toURI().toString(),
-                        "lastEmittedSize" to from,
-                        "encoded" to encodedBuffer,
-                        "deltaSize" to length,
-                        "position" to positionInMs,
-                        "mimeType" to mimeType,
-                        "totalSize" to fileSize,
-                        "streamUuid" to streamUuid,
-                        "compression" to compressionBundle
+        if(!isAppInBackground) {
+            mainHandler.post {
+                try {
+                    eventSender.sendExpoEvent(
+                        Constants.AUDIO_EVENT_NAME, bundleOf(
+                            "fileUri" to audioFile?.toURI().toString(),
+                            "lastEmittedSize" to from,
+                            "encoded" to encodedBuffer,
+                            "deltaSize" to length,
+                            "position" to positionInMs,
+                            "mimeType" to mimeType,
+                            "totalSize" to fileSize,
+                            "streamUuid" to streamUuid,
+                            "compression" to compressionBundle
+                        )
                     )
-                )
-            } catch (e: Exception) {
-                LogUtils.e(CLASS_NAME, "Failed to send event", e)
+                } catch (e: Exception) {
+                    LogUtils.e(CLASS_NAME, "Failed to send event", e)
+                }
             }
+        } else {
+            LogUtils.d(CLASS_NAME, "Skipping sending audio event...")
         }
 
         // Analysis is already handled in recordingProcess method to avoid duplicate processing
