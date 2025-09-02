@@ -149,7 +149,7 @@ class AudioRecorderManager(
     // Flag to track if the app is in foreground. We should not emit events when the app is in background
     // as this blocks UI thread and can cause app not responding (ANR) when returning to foreground 
     // after a long background recording.
-    private val isAppInBackground = false
+    private var isAppInBackground = false
 
     fun onAppGoesToForeground() {
         LogUtils.d(CLASS_NAME, "App has entered the foreground.")
